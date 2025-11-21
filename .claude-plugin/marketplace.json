@@ -15,7 +15,10 @@
       "source": "./",
       "description": "Complete skill set for building analytics with drizzle-cube - includes cube definitions, queries, dashboards, and chart configurations",
       "version": "1.0.0",
-      "author": "Drizzle Cube Team",
+      "author": {
+        "name": "Drizzle Cube Team",
+        "email": "clifton.cunningham@gmail.com"
+      },
       "keywords": [
         "drizzle",
         "analytics",
