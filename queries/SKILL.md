@@ -168,42 +168,86 @@ const query = {
 }
 ```
 
-### Date Range Filtering
+### Date Range Filtering with Time Grouping
+
+Time dimensions with `dateRange` filter AND group data by time. The dimension appears in the output grouped by the specified granularity.
 
 ```typescript
-// Absolute date range
+// Absolute date range (array format)
 const query = {
   measures: ['Employees.count'],
   timeDimensions: [{
     dimension: 'Employees.createdAt',
+    granularity: 'week',
     dateRange: ['2024-01-01', '2024-12-31']
   }]
 }
+// Result: Weekly employee counts from Jan 1 to Dec 31, 2024
 
-// Relative date range
+// Single date (becomes full day range)
 const query2 = {
   measures: ['Employees.count'],
   timeDimensions: [{
     dimension: 'Employees.createdAt',
-    dateRange: 'last 7 days'
+    granularity: 'hour',
+    dateRange: '2024-01-15'
+  }]
+}
+// Result: Hourly counts for January 15, 2024
+
+// Relative date range
+const query3 = {
+  measures: ['Employees.count'],
+  timeDimensions: [{
+    dimension: 'Employees.createdAt',
+    granularity: 'day',
+    dateRange: 'last 30 days'
+  }]
+}
+// Result: Daily counts for the last 30 days
+```
+
+**All Supported Date Range Patterns:**
+
+```typescript
+// Fixed relative ranges
+const fixedRanges = [
+  'today',              // Current day
+  'yesterday',          // Previous day
+  'this week',          // Current week (Monday-Sunday)
+  'this month',         // Current month
+  'this quarter',       // Current quarter (Q1-Q4)
+  'this year',          // Current year
+  'last week',          // Previous week
+  'last month',         // Previous month
+  'last quarter',       // Previous quarter
+  'last year',          // Previous year
+  'last 7 days',        // Last 7 days from now
+  'last 30 days',       // Last 30 days from now
+  'last 12 months'      // Last 12 months from now
+]
+
+// Flexible relative ranges (N can be any number)
+const flexibleRanges = [
+  'last N days',        // e.g., 'last 45 days', 'last 90 days'
+  'last N weeks',       // e.g., 'last 8 weeks', 'last 12 weeks'
+  'last N months',      // e.g., 'last 3 months', 'last 18 months'
+  'last N quarters',    // e.g., 'last 2 quarters', 'last 4 quarters'
+  'last N years'        // e.g., 'last 2 years', 'last 5 years'
+]
+
+// Examples of flexible patterns
+const examples = {
+  measures: ['Sales.revenue'],
+  timeDimensions: [{
+    dimension: 'Sales.date',
+    granularity: 'week',
+    dateRange: 'last 12 weeks'  // Last 12 weeks grouped by week
   }]
 }
 
-// Supported relative ranges:
-const relativeRanges = [
-  'today',
-  'yesterday',
-  'this week',
-  'this month',
-  'this quarter',
-  'this year',
-  'last 7 days',
-  'last 30 days',
-  'last week',
-  'last month',
-  'last quarter',
-  'last year'
-]
+// All patterns are case-insensitive
+'Last 30 Days' === 'last 30 days' === 'LAST 30 DAYS'
 ```
 
 ### Time Dimension with Granularity and Range
@@ -381,6 +425,224 @@ const query = {
   member: 'Employees.createdAt',
   operator: 'afterDate',
   values: ['2023-01-01']
+}
+```
+
+### Date Range Filters (Filter Without Time Grouping)
+
+**NEW**: Use `dateRange` in filters to filter by date WITHOUT adding time dimensions to the output. This is perfect for KPI cards, summaries, and any query where you want to filter by time period but don't need time-series data.
+
+**Key Differences from timeDimensions:**
+- **filters.dateRange**: Filters data only, NO time columns in output
+- **timeDimensions.dateRange**: Filters AND groups data, time columns appear in output
+
+#### Basic Filter with dateRange
+
+```typescript
+// Filter employees created in last 30 days
+// Time dimension does NOT appear in output
+const query = {
+  measures: ['Employees.count', 'Employees.avgSalary'],
+  dimensions: ['Employees.department'],
+  filters: [{
+    member: 'Employees.createdAt',
+    operator: 'inDateRange',    // REQUIRED operator
+    dateRange: 'last 30 days'   // NEW property
+  }]
+}
+
+// Result: Department-level stats filtered to last 30 days
+// Output columns: department, count, avgSalary (NO createdAt column)
+```
+
+#### All dateRange Formats Work in Filters
+
+```typescript
+// Absolute date range (array)
+{
+  member: 'Orders.createdAt',
+  operator: 'inDateRange',
+  dateRange: ['2024-01-01', '2024-12-31']
+}
+
+// Single date (full day)
+{
+  member: 'Orders.createdAt',
+  operator: 'inDateRange',
+  dateRange: '2024-01-15'
+}
+
+// Fixed relative ranges
+{
+  member: 'Orders.createdAt',
+  operator: 'inDateRange',
+  dateRange: 'today'
+}
+
+{
+  member: 'Orders.createdAt',
+  operator: 'inDateRange',
+  dateRange: 'this month'
+}
+
+{
+  member: 'Orders.createdAt',
+  operator: 'inDateRange',
+  dateRange: 'last quarter'
+}
+
+// Flexible relative ranges
+{
+  member: 'Orders.createdAt',
+  operator: 'inDateRange',
+  dateRange: 'last 90 days'
+}
+
+{
+  member: 'Orders.createdAt',
+  operator: 'inDateRange',
+  dateRange: 'last 12 weeks'
+}
+
+{
+  member: 'Orders.createdAt',
+  operator: 'inDateRange',
+  dateRange: 'last 6 months'
+}
+```
+
+#### When to Use filters.dateRange vs timeDimensions.dateRange
+
+**Use filters.dateRange when:**
+- Building KPI cards (total sales this month)
+- Showing summary statistics for a time period
+- You need to filter by date but don't want time columns in output
+- Creating comparison queries (this month vs last month using separate queries)
+- Dashboard widgets showing single metrics
+
+**Use timeDimensions.dateRange when:**
+- Creating time-series charts (line charts, area charts)
+- Showing trends over time (weekly signups, monthly revenue)
+- Need time dimension in output (day, week, month columns)
+- Comparing periods in a single query with time grouping
+
+#### Comparison Table
+
+| Feature | filters.dateRange | timeDimensions.dateRange |
+|---------|-------------------|--------------------------|
+| **Filters data** | ✅ Yes | ✅ Yes |
+| **Groups by time** | ❌ No | ✅ Yes |
+| **Time column in output** | ❌ No | ✅ Yes |
+| **Requires granularity** | ❌ No | ✅ Yes |
+| **Requires operator** | ✅ `inDateRange` | ❌ N/A |
+| **Best for** | KPIs, summaries | Charts, trends |
+
+#### Practical Examples
+
+```typescript
+// Example 1: KPI Card - Total sales this month (NO time grouping)
+const thisMonthSales = {
+  measures: ['Orders.totalRevenue', 'Orders.count'],
+  filters: [{
+    member: 'Orders.createdAt',
+    operator: 'inDateRange',
+    dateRange: 'this month'
+  }]
+}
+// Output: { totalRevenue: 150000, count: 342 }
+
+// Example 2: Time-series chart - Daily sales last 30 days (WITH time grouping)
+const dailySalesChart = {
+  measures: ['Orders.totalRevenue'],
+  timeDimensions: [{
+    dimension: 'Orders.createdAt',
+    granularity: 'day',
+    dateRange: 'last 30 days'
+  }]
+}
+// Output: [
+//   { 'Orders.createdAt': '2024-01-01', totalRevenue: 5000 },
+//   { 'Orders.createdAt': '2024-01-02', totalRevenue: 5500 },
+//   ...
+// ]
+
+// Example 3: Department summary for Q1 (NO time grouping)
+const q1Summary = {
+  measures: ['Employees.count', 'Employees.avgSalary'],
+  dimensions: ['Employees.department'],
+  filters: [{
+    member: 'Employees.createdAt',
+    operator: 'inDateRange',
+    dateRange: 'this quarter'
+  }]
+}
+// Output: [
+//   { department: 'Engineering', count: 50, avgSalary: 120000 },
+//   { department: 'Sales', count: 30, avgSalary: 90000 }
+// ]
+
+// Example 4: Combining filters.dateRange with other filters
+const activeEmployeesLast6Months = {
+  measures: ['Employees.count'],
+  dimensions: ['Employees.department'],
+  filters: [{
+    and: [
+      {
+        member: 'Employees.createdAt',
+        operator: 'inDateRange',
+        dateRange: 'last 6 months'
+      },
+      {
+        member: 'Employees.isActive',
+        operator: 'equals',
+        values: [true]
+      },
+      {
+        member: 'Employees.salary',
+        operator: 'gte',
+        values: [50000]
+      }
+    ]
+  }]
+}
+```
+
+#### Important Notes
+
+1. **Operator is mandatory**: When using `dateRange` in filters, you MUST use `operator: 'inDateRange'`
+2. **Time dimensions only**: `dateRange` only works with time dimensions (type: 'time'), not regular dimensions
+3. **Precedence**: If both `dateRange` and `values` are provided, `dateRange` takes precedence
+4. **Validation**: Invalid date ranges will throw an error during query execution
+
+```typescript
+// ❌ WRONG: Missing operator
+{
+  member: 'Employees.createdAt',
+  dateRange: 'last 30 days'
+  // ERROR: Missing operator: 'inDateRange'
+}
+
+// ❌ WRONG: Wrong operator
+{
+  member: 'Employees.createdAt',
+  operator: 'equals',
+  dateRange: 'last 30 days'
+  // ERROR: Must use 'inDateRange' operator with dateRange
+}
+
+// ❌ WRONG: Non-time dimension
+{
+  member: 'Employees.name',  // String dimension, not time
+  operator: 'inDateRange',
+  dateRange: 'last 30 days'
+  // ERROR: Can only use dateRange with time dimensions
+}
+
+// ✅ CORRECT
+{
+  member: 'Employees.createdAt',
+  operator: 'inDateRange',
+  dateRange: 'last 30 days'
 }
 ```
 
@@ -780,8 +1042,13 @@ const result = {
 3. **Limit large result sets** - Use `limit` and `offset` for pagination
 4. **Order strategically** - Order by measures for "top N" queries
 5. **Combine filters efficiently** - Use AND/OR appropriately to minimize data scanned
-6. **Use time dimensions** - Leverage granularity for time-series analysis
+6. **Use time dimensions wisely** - Leverage granularity for time-series analysis
 7. **Test security context** - Always validate multi-tenant isolation
+8. **Choose the right dateRange approach**:
+   - Use `filters.dateRange` for KPIs and summaries (no time grouping needed)
+   - Use `timeDimensions.dateRange` for charts and trends (time grouping needed)
+   - Leverage flexible patterns like `'last 90 days'` instead of hardcoded dates
+9. **Prefer relative date ranges** - Use `'last 30 days'` instead of absolute dates for dynamic reports
 
 ## Common Pitfalls
 
@@ -790,6 +1057,12 @@ const result = {
 - **Invalid date format** - Use ISO format: `2024-01-01`
 - **Mixing AND/OR incorrectly** - Nested compound filters need careful structure
 - **Performance issues** - Large queries without limits can be slow
+- **Missing `inDateRange` operator** - When using `dateRange` in filters, you MUST specify `operator: 'inDateRange'`
+- **Using dateRange on non-time dimensions** - `dateRange` only works with time dimensions (type: 'time')
+- **Confusing filters.dateRange vs timeDimensions.dateRange**:
+  - Wrong: Using `timeDimensions.dateRange` for a KPI card (adds unnecessary time column to output)
+  - Wrong: Using `filters.dateRange` for a time-series chart (no time grouping, can't create chart)
+- **Invalid relative date patterns** - Use exact patterns like `'last 30 days'` not `'past 30 days'` or `'previous 30 days'`
 
 ## All Available Filter Operators
 
