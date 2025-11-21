@@ -1,0 +1,31 @@
+{
+  "name": "drizzle-cube-skills",
+  "owner": {
+    "name": "Drizzle Cube",
+    "email": "clifton.cunningham@gmail.com"
+  },
+  "metadata": {
+    "description": "Claude Code skills for working with Drizzle Cube - a Drizzle ORM-first semantic layer with type-safe analytics and dashboards",
+    "version": "1.0.0",
+    "pluginRoot": "./"
+  },
+  "plugins": [
+    {
+      "name": "drizzle-cube",
+      "source": "./",
+      "description": "Complete skill set for building analytics with drizzle-cube - includes cube definitions, queries, dashboards, and chart configurations",
+      "version": "1.0.0",
+      "author": "Drizzle Cube Team",
+      "keywords": [
+        "drizzle",
+        "analytics",
+        "semantic-layer",
+        "dashboard",
+        "orm",
+        "cube",
+        "charts",
+        "data-visualization"
+      ]
+    }
+  ]
+}
