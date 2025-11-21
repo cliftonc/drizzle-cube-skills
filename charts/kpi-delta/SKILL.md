@@ -28,6 +28,10 @@ chartType: 'kpiDelta'
     }]
   }),
   chartType: 'kpiDelta',
+  chartConfig: {
+    yAxis: ['Sales.totalRevenue'],
+    xAxis: ['Sales.date']
+  },
   displayConfig: {
     prefix: '$',
     decimals: 2,
@@ -36,6 +40,22 @@ chartType: 'kpiDelta'
   x: 0, y: 0, w: 3, h: 2
 }
 ```
+
+## Chart Configuration (`chartConfig`)
+
+### yAxis (Value)
+- **Type**: `string[]`
+- **Required**: Yes
+- **Max Items**: 1
+- **Purpose**: The measure to display and calculate delta for
+- **Example**: `['Sales.totalRevenue']`
+
+### xAxis (Optional - Ordering)
+- **Type**: `string[]`
+- **Optional**: Yes
+- **Max Items**: 1
+- **Purpose**: Dimension for ordering data points (typically time dimension)
+- **Example**: `['Sales.date']`
 
 ## Display Configuration (`displayConfig`)
 
@@ -88,6 +108,10 @@ chartType: 'kpiDelta'
     }]
   }),
   chartType: 'kpiDelta',
+  chartConfig: {
+    yAxis: ['Sales.totalRevenue'],
+    xAxis: ['Sales.date']
+  },
   displayConfig: {
     prefix: '$',
     decimals: 2,
@@ -112,6 +136,10 @@ chartType: 'kpiDelta'
     }]
   }),
   chartType: 'kpiDelta',
+  chartConfig: {
+    yAxis: ['Users.activeCount'],
+    xAxis: ['Activity.date']
+  },
   displayConfig: {
     suffix: ' users',
     decimals: 0,
@@ -136,6 +164,10 @@ chartType: 'kpiDelta'
     }]
   }),
   chartType: 'kpiDelta',
+  chartConfig: {
+    yAxis: ['Analytics.conversionRate'],
+    xAxis: ['Analytics.date']
+  },
   displayConfig: {
     suffix: '%',
     decimals: 1,

@@ -23,6 +23,9 @@ chartType: 'kpiNumber'
     measures: ['Sales.totalRevenue']
   }),
   chartType: 'kpiNumber',
+  chartConfig: {
+    yAxis: ['Sales.totalRevenue']
+  },
   displayConfig: {
     prefix: '$',
     suffix: '',
@@ -31,6 +34,15 @@ chartType: 'kpiNumber'
   x: 0, y: 0, w: 3, h: 2
 }
 ```
+
+## Chart Configuration (`chartConfig`)
+
+### yAxis (Value)
+- **Type**: `string[]`
+- **Required**: Yes
+- **Max Items**: 1
+- **Purpose**: The measure to display
+- **Example**: `['Sales.totalRevenue']`
 
 ## Display Configuration (`displayConfig`)
 
@@ -69,6 +81,9 @@ chartType: 'kpiNumber'
     measures: ['Sales.totalRevenue']
   }),
   chartType: 'kpiNumber',
+  chartConfig: {
+    yAxis: ['Sales.totalRevenue']
+  },
   displayConfig: {
     prefix: '$',
     decimals: 2
@@ -87,6 +102,9 @@ chartType: 'kpiNumber'
     measures: ['Users.count']
   }),
   chartType: 'kpiNumber',
+  chartConfig: {
+    yAxis: ['Users.count']
+  },
   displayConfig: {
     suffix: ' users',
     decimals: 0
@@ -105,6 +123,9 @@ chartType: 'kpiNumber'
     measures: ['Analytics.conversionRate']
   }),
   chartType: 'kpiNumber',
+  chartConfig: {
+    yAxis: ['Analytics.conversionRate']
+  },
   displayConfig: {
     suffix: '%',
     decimals: 1
@@ -123,6 +144,9 @@ chartType: 'kpiNumber'
     measures: ['Orders.avgValue']
   }),
   chartType: 'kpiNumber',
+  chartConfig: {
+    yAxis: ['Orders.avgValue']
+  },
   displayConfig: {
     prefix: '$',
     decimals: 2
@@ -145,6 +169,9 @@ chartType: 'kpiNumber'
     }]
   }),
   chartType: 'kpiNumber',
+  chartConfig: {
+    yAxis: ['Users.activeCount']
+  },
   displayConfig: {
     suffix: ' active',
     decimals: 0,
@@ -164,6 +191,9 @@ chartType: 'kpiNumber'
     measures: ['Files.totalSize']
   }),
   chartType: 'kpiNumber',
+  chartConfig: {
+    yAxis: ['Files.totalSize']
+  },
   displayConfig: {
     suffix: ' GB',
     decimals: 1

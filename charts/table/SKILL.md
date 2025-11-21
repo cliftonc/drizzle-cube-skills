@@ -35,9 +35,27 @@ chartType: 'table'
 }
 ```
 
-## Chart Configuration
+## Chart Configuration (`chartConfig`)
 
-Tables don't require `chartConfig` - all dimensions and measures from the query are displayed as columns.
+Tables don't require `chartConfig` by default - all dimensions and measures from the query are automatically displayed as columns.
+
+**Optional Configuration:**
+
+### xAxis (Column Selection)
+- **Type**: `string[]`
+- **Optional**: Yes
+- **Purpose**: Explicitly select which columns to display (if omitted, all fields are shown)
+- **Example**: `['Employees.name', 'Employees.email', 'Employees.count']`
+
+```typescript
+// Display specific columns only
+chartConfig: {
+  xAxis: ['Employees.name', 'Employees.email', 'Sales.totalRevenue']
+}
+
+// Or omit chartConfig to show all fields
+// (default behavior)
+```
 
 ## Query Configuration
 

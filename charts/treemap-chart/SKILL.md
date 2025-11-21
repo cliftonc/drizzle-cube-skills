@@ -25,7 +25,7 @@ chartType: 'treemap'
   }),
   chartType: 'treemap',
   chartConfig: {
-    series: ['Products.category'],
+    xAxis: ['Products.category'],
     yAxis: ['Sales.totalRevenue']
   },
   x: 0, y: 0, w: 8, h: 6
@@ -34,10 +34,16 @@ chartType: 'treemap'
 
 ## Chart Configuration (`chartConfig`)
 
-### series (Hierarchy)
+### xAxis (Categories/Hierarchy)
 - **Type**: `string[]`
-- **Purpose**: Dimensions for hierarchy levels
-- **Example**: `['Category.name', 'Subcategory.name']`
+- **Required**: Yes
+- **Purpose**: Dimensions for hierarchical grouping (use multiple for nested hierarchy)
+- **Example**: `['Products.category']` or `['Products.category', 'Products.subcategory']`
+
+### series (Optional - Color Grouping)
+- **Type**: `string[]`
+- **Purpose**: Optional dimension for color-coding groups
+- **Example**: `['Products.region']`
 
 ### yAxis (Size)
 - **Type**: `string[]`
@@ -58,7 +64,7 @@ chartType: 'treemap'
   }),
   chartType: 'treemap',
   chartConfig: {
-    series: ['Products.category', 'Products.subcategory'],
+    xAxis: ['Products.category', 'Products.subcategory'],
     yAxis: ['Sales.totalRevenue']
   },
   x: 0, y: 0, w: 12, h: 7

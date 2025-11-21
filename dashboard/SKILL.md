@@ -91,10 +91,16 @@ function YourDashboard() {
 <CubeProvider
   apiOptions={{ apiUrl: '/cubejs-api/v1' }}
   token="auth-token"
+  features={{ enableAI: true }}  // Optional: Enable AI features
 >
   {children}
 </CubeProvider>
 ```
+
+**Props:**
+- `apiOptions`: Object with `apiUrl` for Cube API endpoint
+- `token`: Authentication token (optional)
+- `features`: Optional features configuration (e.g., `{ enableAI: true }`)
 
 ### With Dynamic Token
 
@@ -161,7 +167,8 @@ function DashboardSettings() {
 ```typescript
 interface DashboardConfig {
   portlets: PortletConfig[]
-  colorPalette?: 'default' | 'ocean' | 'sunset' | 'forest'
+  layouts?: { [key: string]: any }  // Optional react-grid-layout layouts
+  colorPalette?: string  // Optional color palette name (not limited to specific values)
 }
 
 interface PortletConfig {
@@ -345,7 +352,7 @@ The dashboard uses a 12-column responsive grid system.
   x: 0,  // Start at left
   y: 0,  // Start at top
   w: 12, // Full width (12 columns)
-  h: 4   // 240px height
+  h: 4   // 320px height (h × 80px rowHeight)
 }
 
 // Half width portlets side-by-side

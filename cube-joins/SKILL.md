@@ -188,7 +188,7 @@ export const employeesCube = defineCube({
     DepartmentsViaTimeEntries: {
       targetCube: () => departmentsCube,
       relationship: 'belongsToMany', // Many-to-many relationship
-      on: [], // Not used for belongsToMany
+      on: [], // IGNORED for belongsToMany - use 'through' configuration instead
       through: {
         table: timeEntries, // Junction table
         sourceKey: [

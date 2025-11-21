@@ -14,36 +14,7 @@ Drizzle Cube provides framework adapters that:
 - Handle security context extraction from requests
 - Integrate with your existing web framework
 - Support `/load`, `/sql`, and `/meta` endpoints
-
-## Semantic Layer Initialization
-
-First, create and configure the semantic layer compiler:
-
-```typescript
-import { SemanticLayerCompiler } from 'drizzle-cube'
-import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
-import * as schema from './schema'
-import { employeesCube, departmentsCube } from './cubes'
-
-// Initialize database connection
-const queryClient = postgres(process.env.DATABASE_URL)
-const db = drizzle(queryClient, { schema })
-
-// Create semantic layer compiler
-const compiler = new SemanticLayerCompiler({
-  drizzle: db,
-  schema: schema,
-  engineType: 'postgres' // or 'mysql', 'sqlite', or auto-detect
-})
-
-// Register your cubes
-compiler.registerCube(employeesCube)
-compiler.registerCube(departmentsCube)
-// ... register more cubes
-
-export { compiler }
-```
+- **Create the semantic layer compiler internally** from cubes array
 
 ## Express Adapter
 
@@ -57,27 +28,36 @@ npm install express drizzle-cube
 
 ```typescript
 import express from 'express'
-import { createCubeApi } from 'drizzle-cube/adapters/express'
-import { compiler } from './semantic-layer'
+import { createCubeRouter } from 'drizzle-cube/adapters/express'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import * as schema from './schema'
+import { employeesCube, departmentsCube } from './cubes'
+
+// Initialize database connection
+const queryClient = postgres(process.env.DATABASE_URL!)
+const db = drizzle(queryClient, { schema })
 
 const app = express()
 app.use(express.json())
 
-// Create Cube API router
-const cubeApi = createCubeApi({
+// Create Cube API router with cubes array
+const cubeRouter = createCubeRouter({
+  cubes: [employeesCube, departmentsCube], // Array of cube definitions
+  drizzle: db,
+  schema: schema,
   // Extract security context from request
-  extractSecurityContext: async (req) => {
+  extractSecurityContext: async (req, res) => {
     // Example: Extract from authenticated user
     return {
       organisationId: req.user?.organisationId || 'default-org',
       userId: req.user?.id
     }
-  },
-  semanticLayer: compiler
+  }
 })
 
-// Mount the API
-app.use('/cubejs-api/v1', cubeApi)
+// Mount the router
+app.use('/cubejs-api/v1', cubeRouter)
 
 // Start server
 app.listen(3000, () => {
@@ -89,9 +69,15 @@ app.listen(3000, () => {
 
 ```typescript
 import express from 'express'
-import { createCubeApi } from 'drizzle-cube/adapters/express'
+import { createCubeRouter } from 'drizzle-cube/adapters/express'
 import { authenticateJWT } from './auth'
-import { compiler } from './semantic-layer'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import * as schema from './schema'
+import { employeesCube, departmentsCube } from './cubes'
+
+const queryClient = postgres(process.env.DATABASE_URL!)
+const db = drizzle(queryClient, { schema })
 
 const app = express()
 app.use(express.json())
@@ -99,8 +85,11 @@ app.use(express.json())
 // Authentication middleware
 app.use('/cubejs-api', authenticateJWT)
 
-const cubeApi = createCubeApi({
-  extractSecurityContext: async (req) => {
+const cubeRouter = createCubeRouter({
+  cubes: [employeesCube, departmentsCube],
+  drizzle: db,
+  schema: schema,
+  extractSecurityContext: async (req, res) => {
     // req.user is populated by authenticateJWT middleware
     if (!req.user) {
       throw new Error('Unauthorized: No user found')
@@ -112,12 +101,28 @@ const cubeApi = createCubeApi({
       role: req.user.role
     }
   },
-  semanticLayer: compiler
+  engineType: 'postgres', // Optional: specify database type
+  cors: { origin: 'https://yourdomain.com' } // Optional: CORS configuration
 })
 
-app.use('/cubejs-api/v1', cubeApi)
+app.use('/cubejs-api/v1', cubeRouter)
 
 app.listen(3000)
+```
+
+### Express Adapter Options
+
+```typescript
+interface ExpressAdapterOptions {
+  cubes: Cube[]                                // REQUIRED: Array of cube definitions
+  drizzle: DrizzleDatabase                     // REQUIRED: Drizzle database instance
+  schema?: any                                 // RECOMMENDED: Database schema
+  extractSecurityContext: (req, res) => SecurityContext | Promise<SecurityContext>  // REQUIRED
+  engineType?: 'postgres' | 'mysql' | 'sqlite' // Optional: auto-detected if not provided
+  cors?: CorsOptions                           // Optional: CORS configuration
+  basePath?: string                            // Optional: API base path
+  jsonLimit?: string                           // Optional: JSON body parser limit (default: '10mb')
+}
 ```
 
 ## Fastify Adapter
@@ -132,23 +137,31 @@ npm install fastify drizzle-cube
 
 ```typescript
 import Fastify from 'fastify'
-import { registerCubeApi } from 'drizzle-cube/adapters/fastify'
-import { compiler } from './semantic-layer'
+import { registerCubeRoutes } from 'drizzle-cube/adapters/fastify'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import * as schema from './schema'
+import { employeesCube, departmentsCube } from './cubes'
+
+const queryClient = postgres(process.env.DATABASE_URL!)
+const db = drizzle(queryClient, { schema })
 
 const fastify = Fastify({
   logger: true
 })
 
 // Register Cube API plugin
-await registerCubeApi(fastify, {
+await registerCubeRoutes(fastify, {
+  cubes: [employeesCube, departmentsCube], // Array of cube definitions
+  drizzle: db,
+  schema: schema,
   extractSecurityContext: async (request) => {
     // Extract from Fastify request
     return {
       organisationId: request.user?.organisationId || 'default-org',
       userId: request.user?.id
     }
-  },
-  semanticLayer: compiler
+  }
 })
 
 // Start server
@@ -160,14 +173,20 @@ await fastify.listen({ port: 3000 })
 ```typescript
 import Fastify from 'fastify'
 import fastifyJWT from '@fastify/jwt'
-import { registerCubeApi } from 'drizzle-cube/adapters/fastify'
-import { compiler } from './semantic-layer'
+import { registerCubeRoutes } from 'drizzle-cube/adapters/fastify'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import * as schema from './schema'
+import { employeesCube, departmentsCube } from './cubes'
+
+const queryClient = postgres(process.env.DATABASE_URL!)
+const db = drizzle(queryClient, { schema })
 
 const fastify = Fastify({ logger: true })
 
 // Register JWT plugin
 await fastify.register(fastifyJWT, {
-  secret: process.env.JWT_SECRET
+  secret: process.env.JWT_SECRET!
 })
 
 // Authentication decorator
@@ -180,7 +199,10 @@ fastify.decorate('authenticate', async (request, reply) => {
 })
 
 // Register Cube API with authentication
-await registerCubeApi(fastify, {
+await registerCubeRoutes(fastify, {
+  cubes: [employeesCube, departmentsCube],
+  drizzle: db,
+  schema: schema,
   extractSecurityContext: async (request) => {
     // request.user is populated by JWT verification
     if (!request.user) {
@@ -193,8 +215,7 @@ await registerCubeApi(fastify, {
       tenantId: request.user.tenantId
     }
   },
-  semanticLayer: compiler,
-  prefix: '/cubejs-api/v1' // Optional: custom prefix
+  basePath: '/cubejs-api/v1' // Optional: custom prefix
 })
 
 // Protect routes
@@ -215,16 +236,25 @@ npm install hono drizzle-cube
 
 ```typescript
 import { Hono } from 'hono'
-import { createCubeApi } from 'drizzle-cube/adapters/hono'
-import { compiler } from './semantic-layer'
+import { createCubeApp } from 'drizzle-cube/adapters/hono'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import * as schema from './schema'
+import { employeesCube, departmentsCube } from './cubes'
+
+const queryClient = postgres(process.env.DATABASE_URL!)
+const db = drizzle(queryClient, { schema })
 
 const app = new Hono()
 
 // Create Cube API
-const cubeApi = createCubeApi({
-  extractSecurityContext: async (req) => {
-    // Extract from Hono request
-    const authHeader = req.header('Authorization')
+const cubeApp = createCubeApp({
+  cubes: [employeesCube, departmentsCube], // Array of cube definitions
+  drizzle: db,
+  schema: schema,
+  extractSecurityContext: async (c) => {
+    // Extract from Hono context
+    const authHeader = c.req.header('Authorization')
     const token = authHeader?.replace('Bearer ', '')
 
     // Decode token and extract context
@@ -234,12 +264,11 @@ const cubeApi = createCubeApi({
       organisationId: user.organisationId,
       userId: user.id
     }
-  },
-  semanticLayer: compiler
+  }
 })
 
 // Mount the API
-app.route('/cubejs-api/v1', cubeApi)
+app.route('/cubejs-api/v1', cubeApp)
 
 // Start server (for Node.js)
 export default app
@@ -250,31 +279,39 @@ export default app
 ```typescript
 import { Hono } from 'hono'
 import { jwt } from 'hono/jwt'
-import { createCubeApi } from 'drizzle-cube/adapters/hono'
-import { compiler } from './semantic-layer'
+import { createCubeApp } from 'drizzle-cube/adapters/hono'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import * as schema from './schema'
+import { employeesCube, departmentsCube } from './cubes'
+
+const queryClient = postgres(process.env.DATABASE_URL!)
+const db = drizzle(queryClient, { schema })
 
 const app = new Hono()
 
 // JWT middleware
 app.use('/cubejs-api/*', jwt({
-  secret: process.env.JWT_SECRET
+  secret: process.env.JWT_SECRET!
 }))
 
-const cubeApi = createCubeApi({
-  extractSecurityContext: async (req) => {
+const cubeApp = createCubeApp({
+  cubes: [employeesCube, departmentsCube],
+  drizzle: db,
+  schema: schema,
+  extractSecurityContext: async (c) => {
     // Get JWT payload from context
-    const payload = req.get('jwtPayload')
+    const payload = c.get('jwtPayload')
 
     return {
       organisationId: payload.organisationId,
       userId: payload.sub,
       permissions: payload.permissions
     }
-  },
-  semanticLayer: compiler
+  }
 })
 
-app.route('/cubejs-api/v1', cubeApi)
+app.route('/cubejs-api/v1', cubeApp)
 
 export default app
 ```
@@ -283,22 +320,19 @@ export default app
 
 ```typescript
 import { Hono } from 'hono'
-import { createCubeApi } from 'drizzle-cube/adapters/hono'
+import { createCubeApp } from 'drizzle-cube/adapters/hono'
 import { drizzle } from 'drizzle-orm/d1'
-import { compiler } from './semantic-layer'
+import * as schema from './schema'
+import { employeesCube, departmentsCube } from './cubes'
 
 const app = new Hono<{ Bindings: { DB: D1Database } }>()
 
-app.use('*', async (c, next) => {
-  // Initialize Drizzle with D1 database binding
-  const db = drizzle(c.env.DB)
-  c.set('db', db)
-  await next()
-})
-
-const cubeApi = createCubeApi({
-  extractSecurityContext: async (req) => {
-    const authHeader = req.header('Authorization')
+const cubeApp = createCubeApp({
+  cubes: [employeesCube, departmentsCube],
+  drizzle: drizzle(c.env.DB), // D1 database binding
+  schema: schema,
+  extractSecurityContext: async (c) => {
+    const authHeader = c.req.header('Authorization')
     // Extract and verify token
     const user = await verifyEdgeToken(authHeader)
 
@@ -306,11 +340,10 @@ const cubeApi = createCubeApi({
       organisationId: user.orgId,
       userId: user.sub
     }
-  },
-  semanticLayer: compiler
+  }
 })
 
-app.route('/cubejs-api/v1', cubeApi)
+app.route('/cubejs-api/v1', cubeApp)
 
 export default app
 ```
@@ -327,14 +360,24 @@ npm install next drizzle-cube
 
 ```typescript
 // app/api/cubejs/[...cube]/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { createCubeApi } from 'drizzle-cube/adapters/nextjs'
-import { compiler } from '@/lib/semantic-layer'
+import { NextRequest } from 'next/server'
+import { createCubeHandlers } from 'drizzle-cube/adapters/nextjs'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import * as schema from '@/lib/schema'
+import { employeesCube, departmentsCube } from '@/lib/cubes'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
-const cubeHandlers = createCubeApi({
-  extractSecurityContext: async (req) => {
+const queryClient = postgres(process.env.DATABASE_URL!)
+const db = drizzle(queryClient, { schema })
+
+// Create all cube handlers
+const handlers = createCubeHandlers({
+  cubes: [employeesCube, departmentsCube], // Array of cube definitions
+  drizzle: db,
+  schema: schema,
+  extractSecurityContext: async (request) => {
     // Get session from Next Auth
     const session = await getServerSession(authOptions)
 
@@ -346,108 +389,100 @@ const cubeHandlers = createCubeApi({
       organisationId: session.user.organisationId,
       userId: session.user.id
     }
-  },
-  semanticLayer: compiler
+  }
 })
 
+// POST handler for /load and /sql
 export async function POST(
   request: NextRequest,
-  { params }: { params: { cube: string[] } }
+  context: { params: Promise<{ cube: string[] }> }
 ) {
+  const params = await context.params
   const endpoint = params.cube[0]
 
-  try {
-    switch (endpoint) {
-      case 'load':
-        return cubeHandlers.load(request)
-      case 'sql':
-        return cubeHandlers.sql(request)
-      default:
-        return NextResponse.json(
-          { error: 'Endpoint not found' },
-          { status: 404 }
-        )
-    }
-  } catch (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    )
+  // Route to appropriate handler
+  if (endpoint === 'load') {
+    return handlers.load(request, context)
+  } else if (endpoint === 'sql') {
+    return handlers.sql(request, context)
   }
+
+  return new Response('Not Found', { status: 404 })
 }
 
+// GET handler for /meta
 export async function GET(
   request: NextRequest,
-  { params }: { params: { cube: string[] } }
+  context: { params: Promise<{ cube: string[] }> }
 ) {
+  const params = await context.params
   const endpoint = params.cube[0]
 
   if (endpoint === 'meta') {
-    return cubeHandlers.meta(request)
+    return handlers.meta(request, context)
   }
 
-  return NextResponse.json(
-    { error: 'Endpoint not found' },
-    { status: 404 }
-  )
+  return new Response('Not Found', { status: 404 })
 }
 ```
 
-### API Route Setup (Pages Router)
+### Alternative: Individual Handler Creation
+
+You can also create individual handlers:
 
 ```typescript
-// pages/api/cubejs/[...cube].ts
-import { NextApiRequest, NextApiResponse } from 'next'
-import { createCubeApi } from 'drizzle-cube/adapters/nextjs'
-import { compiler } from '@/lib/semantic-layer'
-import { getSession } from 'next-auth/react'
+// app/api/cubejs/load/route.ts
+import { createLoadHandler } from 'drizzle-cube/adapters/nextjs'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import * as schema from '@/lib/schema'
+import { employeesCube, departmentsCube } from '@/lib/cubes'
 
-const cubeHandlers = createCubeApi({
-  extractSecurityContext: async (req) => {
-    const session = await getSession({ req })
+const queryClient = postgres(process.env.DATABASE_URL!)
+const db = drizzle(queryClient, { schema })
 
-    if (!session?.user) {
-      throw new Error('Unauthorized')
-    }
-
+const loadHandler = createLoadHandler({
+  cubes: [employeesCube, departmentsCube],
+  drizzle: db,
+  schema: schema,
+  extractSecurityContext: async (request) => {
+    // Your security context extraction logic
     return {
-      organisationId: session.user.organisationId,
-      userId: session.user.id
+      organisationId: 'org-1',
+      userId: 'user-1'
     }
-  },
-  semanticLayer: compiler
+  }
 })
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  const { cube } = req.query
-  const endpoint = Array.isArray(cube) ? cube[0] : cube
+export const POST = loadHandler
 
-  try {
-    switch (endpoint) {
-      case 'load':
-        if (req.method === 'POST') {
-          return await cubeHandlers.load(req, res)
-        }
-        break
-      case 'sql':
-        if (req.method === 'POST') {
-          return await cubeHandlers.sql(req, res)
-        }
-        break
-      case 'meta':
-        if (req.method === 'GET') {
-          return await cubeHandlers.meta(req, res)
-        }
-        break
-    }
+// app/api/cubejs/meta/route.ts
+import { createMetaHandler } from 'drizzle-cube/adapters/nextjs'
+// ... same imports and setup ...
 
-    res.status(404).json({ error: 'Endpoint not found' })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
+const metaHandler = createMetaHandler({
+  cubes: [employeesCube, departmentsCube],
+  drizzle: db,
+  schema: schema,
+  extractSecurityContext: async (request) => {
+    return { organisationId: 'org-1', userId: 'user-1' }
   }
+})
+
+export const GET = metaHandler
+```
+
+### Next.js Adapter Options
+
+```typescript
+interface NextAdapterOptions {
+  cubes: Cube[]                              // REQUIRED: Array of cube definitions
+  drizzle: DrizzleDatabase                   // REQUIRED: Drizzle database instance
+  schema?: any                               // RECOMMENDED: Database schema
+  extractSecurityContext: (request, context?) => SecurityContext | Promise<SecurityContext>  // REQUIRED
+  engineType?: 'postgres' | 'mysql' | 'sqlite'  // Optional: auto-detected
+  cors?: NextCorsOptions                     // Optional: CORS configuration
+  runtime?: 'edge' | 'nodejs'                // Optional: Runtime environment
 }
 ```
 
@@ -485,7 +520,7 @@ extractSecurityContext: async (req) => {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET)
+    const payload = jwt.verify(token, process.env.JWT_SECRET!) as any
 
     return {
       organisationId: payload.orgId,
@@ -647,10 +682,9 @@ DATABASE_URL=postgresql://user:password@localhost:5432/mydb
 JWT_SECRET=your-secret-key
 
 # API configuration
-CUBEJS_API_SECRET=api-secret-key
 PORT=3000
 
-# Multi-database support
+# Multi-database support (optional - auto-detected)
 DB_TYPE=postgres  # or mysql, sqlite
 ```
 
@@ -661,9 +695,15 @@ DB_TYPE=postgres  # or mysql, sqlite
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
-import { createCubeApi } from 'drizzle-cube/adapters/express'
-import { initializeSemanticLayer } from './semantic-layer'
+import { createCubeRouter } from 'drizzle-cube/adapters/express'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import * as schema from './schema'
+import { employeesCube, departmentsCube } from './cubes'
 import { authenticateJWT } from './middleware/auth'
+
+const queryClient = postgres(process.env.DATABASE_URL!)
+const db = drizzle(queryClient, { schema })
 
 const app = express()
 
@@ -672,17 +712,17 @@ app.use(helmet())
 app.use(cors())
 app.use(express.json())
 
-// Initialize semantic layer
-const compiler = await initializeSemanticLayer()
-
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' })
 })
 
 // Cube API (protected)
-const cubeApi = createCubeApi({
-  extractSecurityContext: async (req) => {
+const cubeRouter = createCubeRouter({
+  cubes: [employeesCube, departmentsCube],
+  drizzle: db,
+  schema: schema,
+  extractSecurityContext: async (req, res) => {
     if (!req.user) {
       throw new Error('Unauthorized')
     }
@@ -694,13 +734,15 @@ const cubeApi = createCubeApi({
       permissions: req.user.permissions
     }
   },
-  semanticLayer: compiler
+  cors: {
+    origin: process.env.ALLOWED_ORIGINS?.split(',')
+  }
 })
 
-app.use('/cubejs-api/v1', authenticateJWT, cubeApi)
+app.use('/cubejs-api/v1', authenticateJWT, cubeRouter)
 
 // Error handling
-app.use((err, req, res, next) => {
+app.use((err: any, req: any, res: any, next: any) => {
   console.error(err.stack)
   res.status(500).json({
     error: err.message,
@@ -714,19 +756,65 @@ app.listen(PORT, () => {
 })
 ```
 
+## Defining Cubes
+
+Cubes are defined separately and imported into the adapter:
+
+```typescript
+// lib/cubes/employees.ts
+import { defineCube } from 'drizzle-cube'
+import { eq } from 'drizzle-orm'
+import { employees } from '../schema'
+
+export const employeesCube = defineCube('Employees', {
+  // Security context filtering (MANDATORY)
+  sql: (ctx) => ({
+    from: employees,
+    where: eq(employees.organisationId, ctx.securityContext.organisationId)
+  }),
+
+  dimensions: {
+    id: {
+      type: 'number',
+      sql: () => employees.id,
+      primaryKey: true
+    },
+    name: {
+      type: 'string',
+      sql: () => employees.name
+    }
+  },
+
+  measures: {
+    count: {
+      type: 'count',
+      sql: () => employees.id
+    }
+  }
+})
+
+// lib/cubes/index.ts
+export { employeesCube } from './employees'
+export { departmentsCube } from './departments'
+// ... export other cubes
+```
+
 ## Best Practices
 
 1. **Always validate security context** - Never trust client input
 2. **Use HTTPS in production** - Protect API traffic
 3. **Implement rate limiting** - Prevent abuse
 4. **Log queries** - Monitor performance and usage
-5. **Cache metadata** - Reduce compilation overhead
-6. **Handle errors gracefully** - Return meaningful error messages
-7. **Validate environment variables** - Check configuration on startup
+5. **Handle errors gracefully** - Return meaningful error messages
+6. **Validate environment variables** - Check configuration on startup
+7. **Pass cubes as array** - Let adapters create the semantic layer internally
+8. **Provide schema for type safety** - Enables better TypeScript inference
 
 ## Common Pitfalls
 
 - **Missing authentication** - Always protect Cube API endpoints
+- **Wrong function names** - Use `createCubeRouter` for Express, not `createCubeApi`
+- **Passing compiler instead of cubes** - Adapters expect `cubes` array, NOT a `semanticLayer` parameter
 - **Exposing internal errors** - Sanitize error messages in production
 - **No security context validation** - Verify context contains required fields
 - **Incorrect CORS configuration** - Configure CORS for your client domains

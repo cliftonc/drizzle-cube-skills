@@ -22,8 +22,7 @@ import { defineCube } from 'drizzle-cube'
 import { eq } from 'drizzle-orm'
 import { employees } from './schema' // Your Drizzle schema
 
-export const employeesCube = defineCube({
-  name: 'Employees',
+export const employeesCube = defineCube('Employees', {
   title: 'Employee Analytics', // Optional human-readable title
   description: 'Analytics for employee data', // Optional description
 
@@ -36,79 +35,72 @@ export const employeesCube = defineCube({
   // Define dimensions (categorical/time fields for grouping/filtering)
   dimensions: {
     id: {
-      name: 'id',
       title: 'Employee ID',
       type: 'number',
-      sql: employees.id,
+      sql: () => employees.id,
       primaryKey: true // Mark the primary key
     },
     name: {
-      name: 'name',
       title: 'Employee Name',
       type: 'string',
-      sql: employees.name
+      sql: () => employees.name
     },
     email: {
-      name: 'email',
       title: 'Email Address',
       type: 'string',
-      sql: employees.email
+      sql: () => employees.email
     },
     departmentId: {
-      name: 'departmentId',
       title: 'Department',
       type: 'number',
-      sql: employees.departmentId
+      sql: () => employees.departmentId
     },
     isActive: {
-      name: 'isActive',
       title: 'Active Status',
       type: 'boolean',
-      sql: employees.isActive
+      sql: () => employees.isActive
     },
     createdAt: {
-      name: 'createdAt',
       title: 'Created Date',
       type: 'time',
-      sql: employees.createdAt
+      sql: () => employees.createdAt
     }
   },
 
   // Define measures (aggregated numeric values)
   measures: {
     count: {
-      name: 'count',
       title: 'Total Employees',
       type: 'count',
-      sql: employees.id
+      sql: () => employees.id
     },
     totalSalary: {
-      name: 'totalSalary',
       title: 'Total Salary',
       type: 'sum',
-      sql: employees.salary
+      sql: () => employees.salary
     },
     avgSalary: {
-      name: 'avgSalary',
       title: 'Average Salary',
       type: 'avg',
-      sql: employees.salary
+      sql: () => employees.salary
     },
     minSalary: {
-      name: 'minSalary',
       title: 'Minimum Salary',
       type: 'min',
-      sql: employees.salary
+      sql: () => employees.salary
     },
     maxSalary: {
-      name: 'maxSalary',
       title: 'Maximum Salary',
       type: 'max',
-      sql: employees.salary
+      sql: () => employees.salary
     }
   }
 })
 ```
+
+**Important**: The `defineCube` function takes two parameters:
+1. **name** (string) - The cube name (e.g., 'Employees')
+2. **definition** (object) - The cube configuration (sql, dimensions, measures, etc.)
 
 ## Dimension Types
 
@@ -118,15 +110,13 @@ Drizzle Cube supports four dimension types:
 ```typescript
 dimensions: {
   name: {
-    name: 'name',
     title: 'Full Name',
     type: 'string',
-    sql: employees.name
+    sql: () => employees.name
   },
   email: {
-    name: 'email',
     type: 'string',
-    sql: employees.email
+    sql: () => employees.email
   }
 }
 ```
@@ -135,15 +125,13 @@ dimensions: {
 ```typescript
 dimensions: {
   id: {
-    name: 'id',
     type: 'number',
-    sql: employees.id,
+    sql: () => employees.id,
     primaryKey: true
   },
   departmentId: {
-    name: 'departmentId',
     type: 'number',
-    sql: employees.departmentId
+    sql: () => employees.departmentId
   }
 }
 ```
@@ -152,15 +140,13 @@ dimensions: {
 ```typescript
 dimensions: {
   createdAt: {
-    name: 'createdAt',
     title: 'Created Date',
     type: 'time',
-    sql: employees.createdAt
+    sql: () => employees.createdAt
   },
   updatedAt: {
-    name: 'updatedAt',
     type: 'time',
-    sql: employees.updatedAt
+    sql: () => employees.updatedAt
   }
 }
 ```
@@ -169,16 +155,14 @@ dimensions: {
 ```typescript
 dimensions: {
   isActive: {
-    name: 'isActive',
     title: 'Active',
     type: 'boolean',
-    sql: employees.isActive
+    sql: () => employees.isActive
   },
   isRemote: {
-    name: 'isRemote',
     title: 'Remote Worker',
     type: 'boolean',
-    sql: employees.isRemote
+    sql: () => employees.isRemote
   }
 }
 ```
@@ -191,16 +175,14 @@ Drizzle Cube supports several aggregation types:
 ```typescript
 measures: {
   count: {
-    name: 'count',
     title: 'Total Count',
     type: 'count',
-    sql: employees.id // Column to count
+    sql: () => employees.id // Column to count
   },
   activeCount: {
-    name: 'activeCount',
     title: 'Active Employees',
     type: 'count',
-    sql: employees.id,
+    sql: () => employees.id,
     filters: [(ctx) => eq(employees.isActive, true)] // Filtered count
   }
 }
@@ -210,10 +192,9 @@ measures: {
 ```typescript
 measures: {
   uniqueDepartments: {
-    name: 'uniqueDepartments',
     title: 'Unique Departments',
     type: 'countDistinct',
-    sql: employees.departmentId
+    sql: () => employees.departmentId
   }
 }
 ```
@@ -222,10 +203,9 @@ measures: {
 ```typescript
 measures: {
   totalSalary: {
-    name: 'totalSalary',
     title: 'Total Salary',
     type: 'sum',
-    sql: employees.salary
+    sql: () => employees.salary
   }
 }
 ```
@@ -234,10 +214,9 @@ measures: {
 ```typescript
 measures: {
   avgSalary: {
-    name: 'avgSalary',
     title: 'Average Salary',
     type: 'avg',
-    sql: employees.salary
+    sql: () => employees.salary
   }
 }
 ```
@@ -246,16 +225,14 @@ measures: {
 ```typescript
 measures: {
   minSalary: {
-    name: 'minSalary',
     title: 'Minimum Salary',
     type: 'min',
-    sql: employees.salary
+    sql: () => employees.salary
   },
   maxSalary: {
-    name: 'maxSalary',
     title: 'Maximum Salary',
     type: 'max',
-    sql: employees.salary
+    sql: () => employees.salary
   }
 }
 ```
@@ -264,13 +241,38 @@ measures: {
 ```typescript
 measures: {
   salaryPercentage: {
-    name: 'salaryPercentage',
     title: 'Salary as Percentage',
     type: 'calculated',
     calculatedSql: '{totalSalary} / NULLIF({departmentBudget}, 0) * 100'
   }
 }
 ```
+
+## SQL Property Patterns
+
+The `sql` property in dimensions and measures can be defined in two ways:
+
+### 1. Direct Column Reference (Recommended)
+```typescript
+dimensions: {
+  name: {
+    type: 'string',
+    sql: () => employees.name  // Function returning column
+  }
+}
+```
+
+### 2. Direct Column (Also Valid)
+```typescript
+dimensions: {
+  name: {
+    type: 'string',
+    sql: employees.name  // Direct column reference
+  }
+}
+```
+
+**Best Practice**: Use the function form `() => employees.column` for consistency and to access the QueryContext if needed.
 
 ## Advanced Patterns
 
@@ -281,31 +283,28 @@ Add filters to measures for conditional aggregation:
 ```typescript
 measures: {
   activeEmployees: {
-    name: 'activeEmployees',
     title: 'Active Employees',
     type: 'count',
-    sql: employees.id,
+    sql: () => employees.id,
     filters: [
       (ctx) => eq(employees.isActive, true)
     ]
   },
   seniorEmployees: {
-    name: 'seniorEmployees',
     title: 'Senior Employees',
     type: 'count',
-    sql: employees.id,
+    sql: () => employees.id,
     filters: [
       (ctx) => {
-        const { sql, gte } = ctx.imports
+        const { gte } = ctx.imports
         return gte(employees.yearsOfService, 5)
       }
     ]
   },
   highEarners: {
-    name: 'highEarners',
     title: 'High Earners',
     type: 'count',
-    sql: employees.id,
+    sql: () => employees.id,
     filters: [
       (ctx) => {
         const { gt } = ctx.imports
@@ -325,16 +324,14 @@ import { sql } from 'drizzle-orm'
 
 dimensions: {
   fullName: {
-    name: 'fullName',
     title: 'Full Name',
     type: 'string',
-    sql: sql`${employees.firstName} || ' ' || ${employees.lastName}`
+    sql: () => sql`${employees.firstName} || ' ' || ${employees.lastName}`
   },
   seniorityLevel: {
-    name: 'seniorityLevel',
     title: 'Seniority',
     type: 'string',
-    sql: sql`CASE
+    sql: () => sql`CASE
       WHEN ${employees.yearsOfService} < 2 THEN 'Junior'
       WHEN ${employees.yearsOfService} < 5 THEN 'Mid-level'
       ELSE 'Senior'
@@ -370,6 +367,10 @@ sql: (ctx) => ({
 })
 ```
 
+**Note**: The `sql` function receives a `QueryContext` object (abbreviated as `ctx`), which contains:
+- `ctx.securityContext` - The security context with tenant/organization information
+- `ctx.imports` - Drizzle ORM operators and functions
+
 ## Complete Example
 
 ```typescript
@@ -377,8 +378,7 @@ import { defineCube } from 'drizzle-cube'
 import { eq, sql, and, gte } from 'drizzle-orm'
 import { employees } from './schema'
 
-export const employeesCube = defineCube({
-  name: 'Employees',
+export const employeesCube = defineCube('Employees', {
   title: 'Employee Analytics',
   description: 'Comprehensive employee data and metrics',
 
@@ -390,48 +390,41 @@ export const employeesCube = defineCube({
 
   dimensions: {
     id: {
-      name: 'id',
       title: 'Employee ID',
       type: 'number',
-      sql: employees.id,
+      sql: () => employees.id,
       primaryKey: true
     },
     name: {
-      name: 'name',
       title: 'Name',
       type: 'string',
-      sql: employees.name
+      sql: () => employees.name
     },
     email: {
-      name: 'email',
       title: 'Email',
       type: 'string',
-      sql: employees.email
+      sql: () => employees.email
     },
     department: {
-      name: 'department',
       title: 'Department',
       type: 'string',
-      sql: employees.departmentName
+      sql: () => employees.departmentName
     },
     isActive: {
-      name: 'isActive',
       title: 'Active',
       type: 'boolean',
-      sql: employees.isActive
+      sql: () => employees.isActive
     },
     createdAt: {
-      name: 'createdAt',
       title: 'Hire Date',
       type: 'time',
-      sql: employees.createdAt
+      sql: () => employees.createdAt
     },
     // Computed dimension
     seniorityLevel: {
-      name: 'seniorityLevel',
       title: 'Seniority Level',
       type: 'string',
-      sql: sql`CASE
+      sql: () => sql`CASE
         WHEN ${employees.yearsOfService} < 2 THEN 'Junior'
         WHEN ${employees.yearsOfService} < 5 THEN 'Mid-level'
         ELSE 'Senior'
@@ -441,54 +434,46 @@ export const employeesCube = defineCube({
 
   measures: {
     count: {
-      name: 'count',
       title: 'Total Employees',
       type: 'count',
-      sql: employees.id
+      sql: () => employees.id
     },
     activeCount: {
-      name: 'activeCount',
       title: 'Active Employees',
       type: 'count',
-      sql: employees.id,
+      sql: () => employees.id,
       filters: [(ctx) => eq(employees.isActive, true)]
     },
     totalSalary: {
-      name: 'totalSalary',
       title: 'Total Salary',
       type: 'sum',
-      sql: employees.salary
+      sql: () => employees.salary
     },
     avgSalary: {
-      name: 'avgSalary',
       title: 'Average Salary',
       type: 'avg',
-      sql: employees.salary
+      sql: () => employees.salary
     },
     minSalary: {
-      name: 'minSalary',
       title: 'Minimum Salary',
       type: 'min',
-      sql: employees.salary
+      sql: () => employees.salary
     },
     maxSalary: {
-      name: 'maxSalary',
       title: 'Maximum Salary',
       type: 'max',
-      sql: employees.salary
+      sql: () => employees.salary
     },
     uniqueDepartments: {
-      name: 'uniqueDepartments',
       title: 'Unique Departments',
       type: 'countDistinct',
-      sql: employees.departmentId
+      sql: () => employees.departmentId
     },
     // Filtered measure
     seniorEmployees: {
-      name: 'seniorEmployees',
       title: 'Senior Employees',
       type: 'count',
-      sql: employees.id,
+      sql: () => employees.id,
       filters: [(ctx) => gte(employees.yearsOfService, 5)]
     }
   }
@@ -518,18 +503,28 @@ compiler.registerCube(employeesCube)
 ## Best Practices
 
 1. **Always include security context filtering** - This is mandatory for multi-tenant isolation
-2. **Use meaningful names** - Dimension and measure names should be clear and descriptive
+2. **Use meaningful names** - Cube names and dimension/measure keys should be clear and descriptive
 3. **Add titles** - Provide human-readable titles for UI display
 4. **Mark primary keys** - Set `primaryKey: true` on ID dimensions
 5. **Type safety** - Use Drizzle ORM table references for compile-time validation
 6. **Filtered measures** - Use filters for conditional aggregations instead of creating separate cubes
+7. **Use function form for sql** - Prefer `sql: () => column` over direct `sql: column` for consistency
 
 ## Common Pitfalls
 
+- **Wrong defineCube signature** - Remember: name is first parameter, NOT inside the object
+  ```typescript
+  // ❌ WRONG
+  defineCube({ name: 'Employees', sql: ... })
+
+  // ✅ CORRECT
+  defineCube('Employees', { sql: ... })
+  ```
 - **Missing security context** - Every cube must filter by security context
 - **Wrong SQL syntax** - Use Drizzle ORM operators (eq, and, or), not raw SQL strings
 - **Incorrect types** - Ensure dimension/measure types match the actual data types
 - **Missing imports** - Import necessary operators from drizzle-orm
+- **Redundant name fields** - Don't add `name:` property to dimensions/measures (the key IS the name)
 
 ## Next Steps
 

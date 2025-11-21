@@ -31,7 +31,8 @@ chartType: 'bubble'
   chartConfig: {
     xAxis: ['Products.price'],
     yAxis: ['Products.rating'],
-    sizeField: 'Products.salesVolume'
+    sizeField: ['Products.salesVolume'],
+    series: ['Products.name']  // Required for bubble labels
   },
   x: 0, y: 0, w: 10, h: 6
 }
@@ -49,16 +50,26 @@ chartType: 'bubble'
 - **Purpose**: Dimension/measure for Y axis
 - **Example**: `['Products.rating']`
 
+### series (Bubble Labels)
+- **Type**: `string[]`
+- **Required**: Yes
+- **Max Items**: 1
+- **Purpose**: Dimension for bubble labels
+- **Example**: `['Products.name']`
+
 ### sizeField (Bubble Size)
-- **Type**: `string`
+- **Type**: `string[]`
+- **Required**: Yes
+- **Max Items**: 1
 - **Purpose**: Measure determining bubble size
-- **Example**: `'Products.salesVolume'`
+- **Example**: `['Products.salesVolume']`
 
 ### colorField (Bubble Color)
-- **Type**: `string`
+- **Type**: `string[]`
 - **Optional**: Yes
+- **Max Items**: 1
 - **Purpose**: Dimension for color grouping
-- **Example**: `'Products.category'`
+- **Example**: `['Products.category']`
 
 ## Display Configuration (`displayConfig`)
 
@@ -96,7 +107,8 @@ chartType: 'bubble'
   chartConfig: {
     xAxis: ['Products.marketShare'],
     yAxis: ['Products.growthRate'],
-    sizeField: 'Products.revenue'
+    sizeField: ['Products.revenue'],
+    series: ['Products.name']
   },
   displayConfig: {
     minBubbleSize: 10,
@@ -125,8 +137,9 @@ chartType: 'bubble'
   chartConfig: {
     xAxis: ['Employees.performance'],
     yAxis: ['Employees.satisfaction'],
-    sizeField: 'Employees.tenure',
-    colorField: 'Departments.name'
+    sizeField: ['Employees.tenure'],
+    series: ['Employees.name'],
+    colorField: ['Departments.name']
   },
   displayConfig: {
     showLegend: true,

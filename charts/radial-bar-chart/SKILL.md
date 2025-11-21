@@ -25,7 +25,7 @@ chartType: 'radialBar'
   }),
   chartType: 'radialBar',
   chartConfig: {
-    series: ['Goals.name'],
+    xAxis: ['Goals.name'],
     yAxis: ['Goals.completionPercentage']
   },
   x: 0, y: 0, w: 6, h: 5
@@ -34,8 +34,10 @@ chartType: 'radialBar'
 
 ## Chart Configuration (`chartConfig`)
 
-### series (Categories)
+### xAxis (Categories)
 - **Type**: `string[]`
+- **Required**: Yes
+- **Max Items**: 1
 - **Purpose**: Dimension for radial segments
 - **Example**: `['Goals.name']`
 
@@ -58,7 +60,7 @@ chartType: 'radialBar'
   }),
   chartType: 'radialBar',
   chartConfig: {
-    series: ['Projects.name'],
+    xAxis: ['Projects.name'],
     yAxis: ['Projects.completionRate']
   },
   displayConfig: {

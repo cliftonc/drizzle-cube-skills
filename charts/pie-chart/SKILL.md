@@ -25,7 +25,7 @@ chartType: 'pie'
   }),
   chartType: 'pie',
   chartConfig: {
-    series: ['Products.category'],  // Slices
+    xAxis: ['Products.category'],  // Slices
     yAxis: ['Sales.totalRevenue']   // Size of slices
   },
   displayConfig: {
@@ -37,14 +37,18 @@ chartType: 'pie'
 
 ## Chart Configuration (`chartConfig`)
 
-### series (Categories)
+### xAxis (Categories)
 - **Type**: `string[]`
+- **Required**: Yes
+- **Max Items**: 1
 - **Purpose**: Dimension creating pie slices
 - **Example**: `['Products.category']`
 
 ### yAxis (Values)
 - **Type**: `string[]`
-- **Purpose**: Measure determining slice size (use one measure only)
+- **Required**: Yes
+- **Max Items**: 1
+- **Purpose**: Measure determining slice size
 - **Example**: `['Sales.revenue']`
 
 ## Display Configuration (`displayConfig`)
@@ -77,7 +81,7 @@ chartType: 'pie'
   }),
   chartType: 'pie',
   chartConfig: {
-    series: ['Departments.name'],
+    xAxis: ['Departments.name'],
     yAxis: ['Employees.count']
   },
   displayConfig: {
@@ -101,7 +105,7 @@ chartType: 'pie'
   }),
   chartType: 'pie',
   chartConfig: {
-    series: ['Products.name'],
+    xAxis: ['Products.name'],
     yAxis: ['Sales.totalRevenue']
   },
   displayConfig: {
@@ -124,7 +128,7 @@ chartType: 'pie'
   }),
   chartType: 'pie',
   chartConfig: {
-    series: ['Orders.status'],
+    xAxis: ['Orders.status'],
     yAxis: ['Orders.count']
   },
   displayConfig: {
