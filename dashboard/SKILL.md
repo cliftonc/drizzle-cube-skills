@@ -697,6 +697,513 @@ function App() {
 export default App
 ```
 
+## Programmatic Dashboard Filters
+
+Dashboard filters can be applied programmatically by passing them through the `dashboardFilters` prop. This is useful for embedding dashboards with pre-configured filters from your application.
+
+### Filter Structure
+
+```typescript
+interface DashboardFilter {
+  id: string        // Unique identifier
+  label: string     // Display label
+  filter: Filter    // Filter definition (SimpleFilter or GroupFilter)
+}
+
+// Simple filter
+interface SimpleFilter {
+  member: string           // Field name (e.g., 'Employees.department')
+  operator: FilterOperator // equals, notEquals, contains, gt, lt, etc.
+  values: any[]           // Filter values
+}
+
+// Group filter (AND/OR logic)
+interface GroupFilter {
+  type: 'and' | 'or'
+  filters: Filter[]       // Array of SimpleFilter or GroupFilter
+}
+```
+
+### Basic Programmatic Filter Example
+
+```typescript
+import { AnalyticsDashboard } from 'drizzle-cube/client'
+import { useState } from 'react'
+
+function DashboardWithFilters() {
+  const [config, setConfig] = useState({
+    portlets: [
+      {
+        id: 'portlet-1',
+        title: 'Employee Count',
+        query: JSON.stringify({
+          measures: ['Employees.count'],
+          dimensions: ['Departments.name']
+        }),
+        chartType: 'bar',
+        chartConfig: {
+          xAxis: ['Departments.name'],
+          yAxis: ['Employees.count']
+        },
+        // Map which dashboard filters apply to this portlet
+        dashboardFilterMapping: ['filter-1', 'filter-2'],
+        x: 0,
+        y: 0,
+        w: 12,
+        h: 4
+      }
+    ]
+  })
+
+  // Define programmatic filters
+  const dashboardFilters = [
+    {
+      id: 'filter-1',
+      label: 'Active Employees Only',
+      filter: {
+        member: 'Employees.isActive',
+        operator: 'equals',
+        values: [true]
+      }
+    },
+    {
+      id: 'filter-2',
+      label: 'Engineering Department',
+      filter: {
+        member: 'Departments.name',
+        operator: 'equals',
+        values: ['Engineering']
+      }
+    }
+  ]
+
+  return (
+    <AnalyticsDashboard
+      config={config}
+      dashboardFilters={dashboardFilters}  // Pass programmatic filters
+      editable={false}
+      onConfigChange={setConfig}
+    />
+  )
+}
+```
+
+### Dynamic Filters from URL Parameters
+
+```typescript
+import { AnalyticsDashboard } from 'drizzle-cube/client'
+import { useSearchParams } from 'react-router-dom'
+import { useMemo } from 'react'
+
+function DashboardWithURLFilters() {
+  const [searchParams] = useSearchParams()
+  const [config, setConfig] = useState(dashboardConfig)
+
+  // Build filters from URL parameters
+  const dashboardFilters = useMemo(() => {
+    const filters = []
+
+    // Department filter from ?department=Engineering
+    const department = searchParams.get('department')
+    if (department) {
+      filters.push({
+        id: 'url-department',
+        label: `Department: ${department}`,
+        filter: {
+          member: 'Departments.name',
+          operator: 'equals',
+          values: [department]
+        }
+      })
+    }
+
+    // Date range filter from ?startDate=2024-01-01&endDate=2024-12-31
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+    if (startDate && endDate) {
+      filters.push({
+        id: 'url-daterange',
+        label: 'Custom Date Range',
+        filter: {
+          member: 'Employees.createdAt',
+          operator: 'inDateRange',
+          values: [startDate, endDate]
+        }
+      })
+    }
+
+    // Status filter from ?status=active
+    const status = searchParams.get('status')
+    if (status === 'active') {
+      filters.push({
+        id: 'url-status',
+        label: 'Active Only',
+        filter: {
+          member: 'Employees.isActive',
+          operator: 'equals',
+          values: [true]
+        }
+      })
+    }
+
+    return filters
+  }, [searchParams])
+
+  return (
+    <AnalyticsDashboard
+      config={config}
+      dashboardFilters={dashboardFilters}
+      editable={false}
+      onConfigChange={setConfig}
+    />
+  )
+}
+```
+
+### User-Based Filters
+
+```typescript
+import { AnalyticsDashboard } from 'drizzle-cube/client'
+import { useAuth } from './auth'
+
+function UserDashboard() {
+  const { user } = useAuth()
+  const [config, setConfig] = useState(dashboardConfig)
+
+  // Apply filters based on user role/permissions
+  const dashboardFilters = useMemo(() => {
+    const filters = []
+
+    // Department managers only see their department
+    if (user.role === 'department_manager') {
+      filters.push({
+        id: 'user-department',
+        label: `Your Department: ${user.department}`,
+        filter: {
+          member: 'Departments.name',
+          operator: 'equals',
+          values: [user.department]
+        }
+      })
+    }
+
+    // Regional managers see their region
+    if (user.role === 'regional_manager') {
+      filters.push({
+        id: 'user-region',
+        label: `Your Region: ${user.region}`,
+        filter: {
+          member: 'Employees.region',
+          operator: 'equals',
+          values: [user.region]
+        }
+      })
+    }
+
+    // All users see only active employees by default
+    filters.push({
+      id: 'default-active',
+      label: 'Active Employees',
+      filter: {
+        member: 'Employees.isActive',
+        operator: 'equals',
+        values: [true]
+      }
+    })
+
+    return filters
+  }, [user])
+
+  return (
+    <AnalyticsDashboard
+      config={config}
+      dashboardFilters={dashboardFilters}
+      editable={false}
+      onConfigChange={setConfig}
+    />
+  )
+}
+```
+
+### Complex Group Filters
+
+```typescript
+function DashboardWithComplexFilters() {
+  const [config, setConfig] = useState(dashboardConfig)
+
+  const dashboardFilters = [
+    {
+      id: 'complex-filter',
+      label: 'Engineering or High Salary',
+      filter: {
+        type: 'or',
+        filters: [
+          {
+            member: 'Departments.name',
+            operator: 'equals',
+            values: ['Engineering']
+          },
+          {
+            member: 'Employees.salary',
+            operator: 'gte',
+            values: [100000]
+          }
+        ]
+      }
+    },
+    {
+      id: 'date-and-status',
+      label: 'Recent Active Hires',
+      filter: {
+        type: 'and',
+        filters: [
+          {
+            member: 'Employees.isActive',
+            operator: 'equals',
+            values: [true]
+          },
+          {
+            member: 'Employees.createdAt',
+            operator: 'afterDate',
+            values: ['2024-01-01']
+          }
+        ]
+      }
+    }
+  ]
+
+  return (
+    <AnalyticsDashboard
+      config={config}
+      dashboardFilters={dashboardFilters}
+      editable={false}
+      onConfigChange={setConfig}
+    />
+  )
+}
+```
+
+### Mapping Filters to Specific Portlets
+
+By default, programmatic filters are NOT applied to any portlets. You must explicitly map which filters apply to which portlets using the `dashboardFilterMapping` array:
+
+```typescript
+const config = {
+  portlets: [
+    {
+      id: 'portlet-1',
+      title: 'All Employees',
+      query: JSON.stringify({
+        measures: ['Employees.count']
+      }),
+      chartType: 'kpiNumber',
+      // This portlet uses both filters
+      dashboardFilterMapping: ['filter-active', 'filter-department'],
+      x: 0,
+      y: 0,
+      w: 4,
+      h: 2
+    },
+    {
+      id: 'portlet-2',
+      title: 'All Departments (Unfiltered)',
+      query: JSON.stringify({
+        measures: ['Departments.count']
+      }),
+      chartType: 'kpiNumber',
+      // This portlet uses NO filters (empty array or omit property)
+      dashboardFilterMapping: [],
+      x: 4,
+      y: 0,
+      w: 4,
+      h: 2
+    },
+    {
+      id: 'portlet-3',
+      title: 'Active Employees Only',
+      query: JSON.stringify({
+        measures: ['Employees.count']
+      }),
+      chartType: 'kpiNumber',
+      // This portlet uses only the active filter
+      dashboardFilterMapping: ['filter-active'],
+      x: 8,
+      y: 0,
+      w: 4,
+      h: 2
+    }
+  ]
+}
+
+const dashboardFilters = [
+  {
+    id: 'filter-active',
+    label: 'Active Only',
+    filter: {
+      member: 'Employees.isActive',
+      operator: 'equals',
+      values: [true]
+    }
+  },
+  {
+    id: 'filter-department',
+    label: 'Engineering',
+    filter: {
+      member: 'Departments.name',
+      operator: 'equals',
+      values: ['Engineering']
+    }
+  }
+]
+```
+
+### Available Filter Operators
+
+```typescript
+// String operators
+'equals'       // Exact match
+'notEquals'    // Not equal
+'contains'     // Contains substring
+'notContains'  // Does not contain substring
+'startsWith'   // Starts with
+'endsWith'     // Ends with
+
+// Numeric operators
+'gt'           // Greater than
+'gte'          // Greater than or equal
+'lt'           // Less than
+'lte'          // Less than or equal
+
+// Null operators
+'set'          // Is not null
+'notSet'       // Is null
+
+// Date operators
+'inDateRange'  // Between two dates (values: [startDate, endDate])
+'beforeDate'   // Before a date (values: [date])
+'afterDate'    // After a date (values: [date])
+```
+
+### Filter Merging Behavior
+
+Filters are merged with portlet queries using AND logic:
+
+```typescript
+// Portlet query
+{
+  measures: ['Employees.count'],
+  filters: [{
+    member: 'Employees.salary',
+    operator: 'gte',
+    values: [50000]
+  }]
+}
+
+// Dashboard filter applied
+{
+  member: 'Employees.isActive',
+  operator: 'equals',
+  values: [true]
+}
+
+// Final merged query (automatic)
+{
+  measures: ['Employees.count'],
+  filters: {
+    and: [
+      {
+        member: 'Employees.isActive',
+        operator: 'equals',
+        values: [true]
+      },
+      {
+        member: 'Employees.salary',
+        operator: 'gte',
+        values: [50000]
+      }
+    ]
+  }
+}
+```
+
+### Hiding Filter UI in Edit Mode
+
+Programmatic filters are always hidden from the filter panel UI. They are applied silently in the background and cannot be edited by users through the dashboard interface. This is useful for:
+
+- Security filtering (user can only see their data)
+- Environment filtering (production vs staging)
+- Application-level filtering (tenant isolation)
+- URL parameter filtering (dashboard embedding)
+
+### Complete Example: Multi-Tenant Dashboard
+
+```typescript
+import { AnalyticsDashboard } from 'drizzle-cube/client'
+import { useAuth } from './auth'
+import { useSearchParams } from 'react-router-dom'
+
+function TenantDashboard() {
+  const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+  const [config, setConfig] = useState(dashboardConfig)
+
+  // Combine tenant isolation + URL filters
+  const dashboardFilters = useMemo(() => {
+    const filters = []
+
+    // REQUIRED: Tenant isolation (security)
+    filters.push({
+      id: 'tenant-isolation',
+      label: `Organization: ${user.organizationName}`,
+      filter: {
+        member: 'Employees.organisationId',
+        operator: 'equals',
+        values: [user.organizationId]
+      }
+    })
+
+    // OPTIONAL: URL department filter
+    const department = searchParams.get('department')
+    if (department) {
+      filters.push({
+        id: 'url-department',
+        label: `Department: ${department}`,
+        filter: {
+          member: 'Departments.name',
+          operator: 'equals',
+          values: [department]
+        }
+      })
+    }
+
+    // OPTIONAL: URL date range
+    const dateRange = searchParams.get('range')
+    if (dateRange === 'last30days') {
+      filters.push({
+        id: 'url-daterange',
+        label: 'Last 30 Days',
+        filter: {
+          member: 'Employees.createdAt',
+          operator: 'inDateRange',
+          values: ['2024-01-01', '2024-01-31']
+        }
+      })
+    }
+
+    return filters
+  }, [user, searchParams])
+
+  return (
+    <AnalyticsDashboard
+      config={config}
+      dashboardFilters={dashboardFilters}
+      editable={user.canEditDashboards}
+      onConfigChange={setConfig}
+    />
+  )
+}
+```
+
 ## Best Practices
 
 1. **Wrap with CubeProvider** - All dashboard components need CubeProvider
@@ -706,6 +1213,8 @@ export default App
 5. **Limit portlet count** - Too many portlets impact performance
 6. **Cache query results** - Use React Query or similar for caching
 7. **Validate queries** - Ensure query strings are valid JSON
+8. **Use programmatic filters for security** - Apply tenant/user isolation via dashboardFilters
+9. **Map filters explicitly** - Use dashboardFilterMapping to control which portlets get which filters
 
 ## Common Pitfalls
 
